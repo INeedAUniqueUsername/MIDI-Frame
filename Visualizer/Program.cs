@@ -9,6 +9,8 @@ using MidiSharp.Events.Voice.Note;
 using static MidiSharp.Events.MidiEvent;
 using Point = System.Drawing.Point;
 
+using Newtonsoft.Json;
+
 namespace Visualizer {
     class KeyImage {
         public bool black;
@@ -18,137 +20,98 @@ namespace Visualizer {
             this.position = position;
         }
     }
+
+    public class ImageSequence {
+        public List<Bitmap> frames;
+        public List<int> timing;
+        public ImageSequence(List<Bitmap> frames, List<int> timing) {
+            this.frames = frames;
+            this.timing = timing;
+        }
+    }
     class Program {
         public static void Main(string[] args) {
-
-            HashSet<byte> pressed = new HashSet<byte>();
-
-
             var folder = @"C:\Users\alexm\Downloads";
-            using (var f = new FileStream(@$"{ folder}\Strawberry Piano.mid", FileMode.Open)) {
-                var m = MidiSequence.Open(f);
-                Console.WriteLine(m);
-
-                /*
-                for (int i = 0; i < m.Tracks.Count; i++) {
-                    MidiSequence newSequence = new MidiSequence(Format.Zero, m.Division);
-                    newSequence.Tracks.Add(m.Tracks[i]);
-                    using (Stream outputStream = File.OpenWrite(f.Name + "." + i + ".mid")) {
-                        newSequence.Save(outputStream);
+            string sequenceFile = @$"{folder}\Strawberry Piano.json";
+            {
+                HashSet<byte> pressed = new HashSet<byte>();
+                using (var f = new FileStream(@$"{ folder}\Strawberry Piano.mid", FileMode.Open)) {
+                    var m = MidiSequence.Open(f);
+                    //Console.WriteLine(m);
+                    List<NoteVoiceMidiEvent> notes = new List<NoteVoiceMidiEvent>();
+                    foreach (var t in m.Tracks) {
+                        notes.AddRange(t.Events.OfType<NoteVoiceMidiEvent>());
                     }
-                }
-                */
-
-
-                List<NoteVoiceMidiEvent> notes = new List<NoteVoiceMidiEvent>();
-                foreach (var t in m.Tracks) {
-                    notes.AddRange(t.Events.OfType<NoteVoiceMidiEvent>());
-                }
-                //Convert from relative to absolute time
-                {
-                    long previous = 0;
-                    foreach (var n in notes) {
-                        var dt = n.DeltaTime;
-                        n.DeltaTime = (n.DeltaTime + previous) / 50;
-                        previous += dt;
-                    }
-
-                    Console.WriteLine($"{notes.Last().DeltaTime / 1000} seconds");
-
-                    previous = notes.First().DeltaTime;
-                    foreach(var n in notes) {
-                        var dt = n.DeltaTime;
-                        n.DeltaTime -= previous;
-                        previous = dt;
-                    }
-                }
-
-
-                //notes = new List<NoteVoiceMidiEvent>(notes.OrderBy(n => n.DeltaTime));
-
-
-                var dir = @$"{folder}\Strawberry Piano Frames";
-                Directory.CreateDirectory(dir);
-
-                int x2 = 2560;
-                Dictionary<string, KeyImage> keys = new Dictionary<string, KeyImage>() {
-                    { "B5",         new KeyImage(false, new Point(3000, 500)) },    //B
-                    { "A#5",    new KeyImage(true,      new Point(x2, 600)) },    //A#
-                    { "A5",         new KeyImage(false, new Point(3000, 800)) },    //A
-                    { "G#5",    new KeyImage(true,      new Point(x2, 900)) },    //G#
-                    { "G5",         new KeyImage(false, new Point(3000, 1100)) },   //G
-                    { "F#5",    new KeyImage(true,      new Point(x2, 1280)) },   //F#
-                    { "F5",         new KeyImage(false, new Point(3000, 1300)) },   //F
-                    { "E5",         new KeyImage(false, new Point(3000, 1700)) },   //E
-                    { "D#5",   new KeyImage(true,       new Point(x2, 1950)) },   //D#
-                    { "D5",         new KeyImage(false, new Point(3000, 2100)) },   //D
-                    { "C#5",   new KeyImage(true,       new Point(x2, 2300)) },   //C#
-                    { "C5",         new KeyImage(false, new Point(3000, 2400)) },   //C
-                };
-
-                //https://stackoverflow.com/a/12376324
-                //VideoFileWriter v = new VideoFileWriter();
-                //v.Open(@$"{folder}\Strawberry.mp4", cover.Width, cover.Height, 30, VideoCodec.MPEG4);
-
-                Console.WriteLine(string.Join(' ', notes.OfType<OnNoteVoiceMidiEvent>().Select(n => GetNoteName(n.Note))));
-
-                int realElapsed = 0;
-                int index = 0;
-                using (Image cover = Bitmap.FromFile(@$"{folder}\Strawberry Piano Note.png")) {
-                    using (GifWriter w = new GifWriter($@"{folder}\Strawberry Piano.gif", 1)) {
-                        while (notes.Any()) {
-                            var delta = notes.First().DeltaTime;
-                            notes.First().DeltaTime = 0;
-                            var now = notes.TakeWhile(n => n.DeltaTime == 0);
-
-                            foreach (var n in now) {
-                                switch (n) {
-                                    case OnNoteVoiceMidiEvent on:
-                                        pressed.Add((on.Note));
-                                        //Console.WriteLine(GetNoteName(n.Note));
-                                        break;
-                                    case OffNoteVoiceMidiEvent off:
-                                        pressed.Remove((off.Note));
-                                        break;
-                                }
-                            }
-                            //Console.WriteLine(now.Count());
-                            notes.RemoveRange(0, now.Count());
-
-                            //var s = string.Join(' ', pressed.OrderBy(p => p).Select(p => GetNoteName(p)));
-                            //Console.WriteLine(s);
-
-
-#if true
-                            int scale = 4;
-                            using (Bitmap frame = new Bitmap(cover.Width / scale, cover.Height / scale)) {
-                                using (Graphics g = Graphics.FromImage(frame)) {
-                                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
-                                    g.DrawImage(cover, new Rectangle(0, 0, frame.Width, frame.Height));
-
-                                    foreach (var n in pressed) {
-                                        if (keys.TryGetValue(GetNoteName(n), out var key)) {
-
-                                            var pos = key.position;
-                                            Fill(frame, new Point(pos.X / scale, pos.Y / scale), Color.Pink);
-                                            //g.FillRectangle(Brushes.Blue, new Rectangle(pos.X / scale, pos.Y / scale, 8, 8));
-                                        }
-
-
-                                        //g.FillRectangle(Brushes.Black, new Rectangle(100, frame.Height - (60 + n * 5), 100, 10));
-                                        //g.DrawString(s, new Font("Consolas", 12), Brushes.Black, new PointF(60, 60));
-                                    }
-
-                                }
-                                //frame.Save(@$"{dir}\{time}_{delta}.png", System.Drawing.Imaging.ImageFormat.Png);
-
-
-                                w.WriteFrame(frame, (int)delta);
-                            }
-                            index++;
-#endif
+                    {
+                        long previous = 0;
+                        foreach (var n in notes) {
+                            var dt = n.DeltaTime;
+                            n.DeltaTime = (n.DeltaTime + previous) / 48;
+                            previous += dt;
                         }
-                        Console.WriteLine($"Total: {realElapsed/1000} seconds");
+                        Console.WriteLine($"{notes.Last().DeltaTime / 1000} seconds");
+                        previous = notes.First().DeltaTime;
+                        foreach (var n in notes) {
+                            var dt = n.DeltaTime;
+                            n.DeltaTime -= previous;
+                            previous = dt;
+                        }
+                    }
+                    var dir = @$"{folder}\Strawberry Piano Frames";
+                    Directory.CreateDirectory(dir);
+                    int x2 = 2560;
+                    Dictionary<string, KeyImage> keys = new Dictionary<string, KeyImage>() {
+                        { "B5",         new KeyImage(false, new Point(3000, 500)) },    //B
+                        { "A#5",    new KeyImage(true,      new Point(x2, 600)) },    //A#
+                        { "A5",         new KeyImage(false, new Point(3000, 800)) },    //A
+                        { "G#5",    new KeyImage(true,      new Point(x2, 900)) },    //G#
+                        { "G5",         new KeyImage(false, new Point(3000, 1100)) },   //G
+                        { "F#5",    new KeyImage(true,      new Point(x2, 1280)) },   //F#
+                        { "F5",         new KeyImage(false, new Point(3000, 1300)) },   //F
+                        { "E5",         new KeyImage(false, new Point(3000, 1700)) },   //E
+                        { "D#5",   new KeyImage(true,       new Point(x2, 1950)) },   //D#
+                        { "D5",         new KeyImage(false, new Point(3000, 2100)) },   //D
+                        { "C#5",   new KeyImage(true,       new Point(x2, 2300)) },   //C#
+                        { "C5",         new KeyImage(false, new Point(3000, 2400)) },   //C
+                    };
+//                    Console.WriteLine(string.Join(' ', notes.OfType<OnNoteVoiceMidiEvent>().Select(n => GetNoteName(n.Note))));
+                    int realElapsed = 0;
+                    int index = 0;
+                    using (Image cover = Bitmap.FromFile(@$"{folder}\Strawberry Piano Note.png")) {
+                        using (GifWriter w = new GifWriter($@"{folder}\Strawberry Piano.gif", 1)) {
+                            while (notes.Any()) {
+                                var delta = notes.First().DeltaTime;
+                                notes.First().DeltaTime = 0;
+                                var now = notes.TakeWhile(n => n.DeltaTime == 0);
+                                foreach (var n in now) {
+                                    switch (n) {
+                                        case OnNoteVoiceMidiEvent on:
+                                            pressed.Add((on.Note));
+                                            break;
+                                        case OffNoteVoiceMidiEvent off:
+                                            pressed.Remove((off.Note));
+                                            break;
+                                    }
+                                }
+                                notes.RemoveRange(0, now.Count());
+                                int scale = 4;
+                                using (Bitmap frame = new Bitmap(cover.Width / scale, cover.Height / scale)) {
+                                    using (Graphics g = Graphics.FromImage(frame)) {
+                                        g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+                                        g.DrawImage(cover, new Rectangle(0, 0, frame.Width, frame.Height));
+                                        foreach (var n in pressed) {
+                                            if (keys.TryGetValue(GetNoteName(n), out var key)) {
+                                                var pos = key.position;
+                                                Fill(frame, new Point(pos.X / scale, pos.Y / scale), Color.Pink);
+                                            }
+                                        }
+                                    }
+                                    w.WriteFrame(frame, (int)delta);
+                                }
+                                index++;
+                            }
+                            Console.WriteLine($"Total: {realElapsed / 1000} seconds");
+                        }
                     }
                 }
             }
