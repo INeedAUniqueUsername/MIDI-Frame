@@ -44,13 +44,32 @@ namespace Visualizer {
                 foreach (var t in m.Tracks) {
                     notes.AddRange(t.Events.OfType<NoteVoiceMidiEvent>());
                 }
+                //Convert from relative to absolute time
+                {
+                    long previous = 0;
+                    foreach (var n in notes) {
+                        var dt = n.DeltaTime;
+                        n.DeltaTime = (n.DeltaTime + previous) / 50;
+                        previous += dt;
+                    }
+
+                    Console.WriteLine($"{notes.Last().DeltaTime / 1000} seconds");
+
+                    previous = notes.First().DeltaTime;
+                    foreach(var n in notes) {
+                        var dt = n.DeltaTime;
+                        n.DeltaTime -= previous;
+                        previous = dt;
+                    }
+                }
+
+
                 //notes = new List<NoteVoiceMidiEvent>(notes.OrderBy(n => n.DeltaTime));
 
 
                 var dir = @$"{folder}\Strawberry Piano Frames";
                 Directory.CreateDirectory(dir);
 
-                //Go die
                 int x2 = 2560;
                 Dictionary<string, KeyImage> keys = new Dictionary<string, KeyImage>() {
                     { "B5",         new KeyImage(false, new Point(3000, 500)) },    //B
@@ -73,7 +92,6 @@ namespace Visualizer {
 
                 Console.WriteLine(string.Join(' ', notes.OfType<OnNoteVoiceMidiEvent>().Select(n => GetNoteName(n.Note))));
 
-                int ticksElapsed = 0;
                 int realElapsed = 0;
                 int index = 0;
                 using (Image cover = Bitmap.FromFile(@$"{folder}\Strawberry Piano Note.png")) {
@@ -100,15 +118,12 @@ namespace Visualizer {
                             //var s = string.Join(' ', pressed.OrderBy(p => p).Select(p => GetNoteName(p)));
                             //Console.WriteLine(s);
 
-                            var ticksDelay = m.DivisionType;
-                            ticksElapsed += (int)delta;
-                            var realDelay = (int)delta / 42;
-                            realElapsed += realDelay;
 
 #if true
                             int scale = 4;
                             using (Bitmap frame = new Bitmap(cover.Width / scale, cover.Height / scale)) {
                                 using (Graphics g = Graphics.FromImage(frame)) {
+                                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
                                     g.DrawImage(cover, new Rectangle(0, 0, frame.Width, frame.Height));
 
                                     foreach (var n in pressed) {
@@ -128,7 +143,7 @@ namespace Visualizer {
                                 //frame.Save(@$"{dir}\{time}_{delta}.png", System.Drawing.Imaging.ImageFormat.Png);
 
 
-                                w.WriteFrame(frame, (int)delta / 30);
+                                w.WriteFrame(frame, (int)delta);
                             }
                             index++;
 #endif
