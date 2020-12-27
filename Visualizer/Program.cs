@@ -31,6 +31,9 @@ namespace Visualizer {
     }
     class Program {
         public static void Main(string[] args) {
+            
+        }
+        public static void StrawberryPiano() {
             var folder = @"C:\Users\alexm\Downloads";
             string sequenceFile = @$"{folder}\Strawberry Piano.json";
             {
@@ -46,7 +49,7 @@ namespace Visualizer {
                         long previous = 0;
                         foreach (var n in notes) {
                             var dt = n.DeltaTime;
-                            n.DeltaTime = (n.DeltaTime + previous) / 48;
+                            n.DeltaTime = (n.DeltaTime + previous) / 44;
                             previous += dt;
                         }
                         Console.WriteLine($"{notes.Last().DeltaTime / 1000} seconds");
@@ -74,7 +77,7 @@ namespace Visualizer {
                         { "C#5",   new KeyImage(true,       new Point(x2, 2300)) },   //C#
                         { "C5",         new KeyImage(false, new Point(3000, 2400)) },   //C
                     };
-//                    Console.WriteLine(string.Join(' ', notes.OfType<OnNoteVoiceMidiEvent>().Select(n => GetNoteName(n.Note))));
+                    //                    Console.WriteLine(string.Join(' ', notes.OfType<OnNoteVoiceMidiEvent>().Select(n => GetNoteName(n.Note))));
                     int realElapsed = 0;
                     int index = 0;
                     using (Image cover = Bitmap.FromFile(@$"{folder}\Strawberry Piano Note.png")) {
