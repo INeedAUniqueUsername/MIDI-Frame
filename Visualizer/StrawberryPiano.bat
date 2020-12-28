@@ -1,0 +1,1 @@
+ffmpeg.exe -framerate 25 -i StrawberryPianoFrames/frame%d.png -r 25   -pix_fmt yuv420p StrawberryPiano.mp4
