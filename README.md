@@ -7,4 +7,4 @@ Here is the first and only video I've ever made with this program. Producing the
 [![Pikmin - Ai no Uta](https://img.youtube.com/vi/kUQmKuUvVWQ/0.jpg)](https://youtu.be/kUQmKuUvVWQ "Pikmin - Ai no Uta")
 
 # What I learned
-"Ai no Uta" from Pikmin is a great song - maybe one of the best I've ever heard.
+"Ai no Uta" from Pikmin is a great song - maybe one of the best I've ever heard. It's the kind of song that can make you want to study piano seriously just so you can play it well.
