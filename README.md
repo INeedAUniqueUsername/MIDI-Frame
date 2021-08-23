@@ -1,4 +1,4 @@
-# MidiVisualizer
+# Strawberry Piano
 This is a very basic MIDI visualizer that reads in a MIDI file and generates video frames by modifying a template image based on which keys are pressed on each moment.
 
 # Demo
